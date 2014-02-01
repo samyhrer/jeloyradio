@@ -8,6 +8,7 @@ var host = "192.168.1.24",
     username = "newdeveloper",
     api = new HueApi(host, username),
     lyssignal = require("./lib/lyssignal"),
+    fs = require('fs'),
     state;
 
 
@@ -15,6 +16,13 @@ var host = "192.168.1.24",
 
 var express = require('express');
 var app = express();
+app.use(express.static(__dirname + '/public'));
+
+app.get('/', function(req, res){
+    fs.readFile(__dirname + '/test.html', 'utf8', function(err, text) {    
+        res.send(text);
+    });
+});
 
 app.get('/green', function(req, res){
   
