@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Styre lys</title>
+	<script src="scripts/jquery-1.11.0.min.js"></script>
+	<script>
+		$(document).ready(function() {
+			$(".green").on("click", function() {
+				$.get( "http://192.168.1.231:3000/green?n=" + $(this).parent().attr("light"), function(data) {
+				  alert( "Make Green kalt" );
+				});
+			})
+
+			$(".yellow").on("click", function() {
+				$.get( "http://192.168.1.231:3000/yellow?n=" + $(this).parent().attr("light"), function(data) {
+				  alert( "Make Yellow kalt" );
+				});
+			})
+
+			$(".red").on("click", function() {
+				$.get( "http://192.168.1.231:3000/red?n=" + $(this).parent().attr("light"), function(data) {
+				  alert( "Make Red kalt" );
+				});
+			})
+
+			$(".blink").on("click", function() {
+				$.get( "http://192.168.1.231:3000/blink?n=" + $(this).parent().attr("light"), function(data) {
+				  alert( "Blink kalt" );
+				});
+			})
+
+			$(".turn_off").on("click", function() {
+				$.get( "http://192.168.1.231:3000/off?n=" + $(this).parent().attr("light"), function(data) {
+				  alert( "Turn off kalt" );
+				});
+			})		
+
+			$(".turn_off_all").on("click", function() {
+				$.get( "http://192.168.1.231:3000/offall", function(data) {
+				  alert( "Turn off all kalt" );
+				});
+			})			
+		});
+	</script>
+</head>
+<body>
+	<ul>
+		<li light="1">
+			Light 1: 
+			<input type="button" class="green" value="Make Green" />
+			<input type="button" class="yellow" value="Make Yellow" />
+			<input type="button" class="red" value="Make Red" />
+			<input type="button" class="blink" value="Blink" />
+			<input type="button" class="turn_off" value="Turn off" />
+		</li>
+		<li light="2">
+			Light 2: 
+			<input type="button" class="green" value="Make Green" />
+			<input type="button" class="yellow" value="Make Yellow" />
+			<input type="button" class="red" value="Make Red" />
+			<input type="button" class="blink" value="Blink" />
+			<input type="button" class="turn_off" value="Turn off" />
+		</li>
+		<li light="3">
+			Light 3: 
+			<input type="button" class="green" value="Make Green" />
+			<input type="button" class="yellow" value="Make Yellow" />
+			<input type="button" class="red" value="Make Red" />
+			<input type="button" class="blink" value="Blink" />
+			<input type="button" class="turn_off" value="Turn off" />
+		</li>
+		<li>
+			All:
+			<input type="button" class="turn_off_all" value="Turn off all" />
+		</li>
+	</ul>
+</body>
+</html>
