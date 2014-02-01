@@ -1,1 +1,67 @@
-hello world
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" ></script>
+
+		<style type="text/css">
+			html { 
+				padding: 0;
+				font-family: Arial;
+				}
+
+			body { 	
+				background: url('snow.jpg') no-repeat center center fixed;
+				background-size: cover;
+				padding: 0;
+				margin: 0;
+			}
+
+			ul {
+				list-style-type: none; 
+			}
+
+			.stops {
+				margin: 0; padding: 0;
+			}
+
+			.stops > li {
+				background-color: white;
+				margin: 1em;
+				padding: .5em;
+			}
+
+			.lineno { background-color: #32374b; color: white; display: inline-block; width: 3em; text-align: center; margin: 0.2em 0; padding: 0.3em; }
+
+			.lamp { padding: 0 1em; font-size: 4em; line-height: 1em; }
+
+		</style>
+	</head>
+	<body>
+
+
+		<script>
+		  	var stops = [];
+		  	$.getJSON( "http://localhost:3000/api/stoppesteder", function( data ) {
+		  		$.each( data, function( key, val ) {
+		  			var lines = [];
+		    		stops.push( "<li id='" + key + "'>" + val.Name + " " + val.WalkingDistance + "m"+ 
+
+		    					"<ul class='lines'>" +
+		    						$.map(val.Lines, function(key, val) {
+		    							return "<li>" + "<span class='lineno'>" + key.LineName + "</span>" + " <span class='lamp'>&#x2022;</span> <span class='lamp'>&#x2022;</span> <span class='lamp'>&#x2022;</span></li>"
+		    						}).join("")
+		    						+ "</ul>" +
+    						
+		    					"</li>" );
+		  		});
+		 
+		  		$( "<ul/>", {
+		    		"class": "stops",
+		    		html: stops.join( "" )
+		  		}).appendTo( "body" );
+		  	});
+
+		</script>
+
+	</body>
+</html>
