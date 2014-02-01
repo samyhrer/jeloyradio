@@ -2,6 +2,7 @@ var ruter = require('./lib/ruter'),
     lyssignal = require('./lib/lyssignal'),
     fs = require('fs'),
     moment = require('moment'),
+    SSE = require('express-sse'),    
     express = require('express');
 
 var app = express();
@@ -19,18 +20,18 @@ app.get('/', function(req, res){
 var lyspaerer = {
     1: {
         id: '1',
-        stoppId: "3010013",
-        linjeId: "60",
+        stoppId: null,
+        linjeId: null,
         minutesUntilExpectedDeparture: '0'
     },
     2: {
-        id: '1',
+        id: '2',
         stoppId: null,
         linjeId: null,
         minutesUntilExpectedDeparture: '0'
     },
     3: {
-        id: '1',
+        id: '3',
         stoppId: null,
         linjeId: null,
         minutesUntilExpectedDeparture: '0'
@@ -62,6 +63,9 @@ function getStoppesteder(res){
     });
 }
 
+sse = new SSE()
+app.get('/api/lyspaerer/updates', sse.init);
+
 app.get('/api/lyspaerer/:id', function(req, res){
     res.send(getLysPaere(req.params.id))    
 });
@@ -71,7 +75,10 @@ app.put('/api/lyspaerer/:id', function(req, res){
     var lyspaere = getLysPaere(id);
     var stoppId = req.body.stoppId;
     var linjeId = req.body.linjeId;
-    lyspaere.linjeId = linjeId;
+    lyspaere.stoppId = stoppId + "";
+    lyspaere.linjeId = linjeId + "";
+    lyssignal.setBlink(id);
+    ticktack();
     res.send("ok");
 });
 
@@ -92,47 +99,22 @@ app.put('/api/lyspaerer/:id/linje', function(req, res){
 });
 
 
-update();
-setInterval(update, 30000);
 
-function update(){
-    var configs = [getLysPaere(1), getLysPaere(2), getLysPaere(3)];
-    for(var i=0;i<configs.length;i++){
-        var config = configs[i];
-        var stoppId = config.stoppId;
-        var linjeId = config.linjeId;
-        if(stoppId && linjeId){
-            var paereId = config.id;            
-            var alternatives = [];
-            var stream = ruter.getDepartures(stoppId, linjeId);            
-            stream.on('data', function(data){
-                alternatives.push(data);                
-            })
-            stream.on('end', function(){
-                var firstAlternative = alternatives[0];
-                var now = moment(new Date());
-                var then = moment(firstAlternative.forventetAdgang);
-                var diffInMinutes = then.diff(now, 'minutes');
-                console.log(paereId)
-                setMinutesRemaining(paereId, diffInMinutes);                
-                var walkTime = 0;
-                var spareMinutes = diffInMinutes - walkTime;
-                console.log(spareMinutes)
-                /*
-                if(spareMinutes > 5){
-                    lyssignal.setRed(i);
-                }
-                if(spareMinutes < 5){
-                    lyssignal.setYellow(i);
-                }
-                if(spareMinutes < 2){
-                    lyssignal.setGreen(i);
-                }
-                if(spareMinutes < 1){
-                    lyssignal.setBlink(i);
-                }
-                */
-            })
+
+lyssignal.setWhite(1);
+lyssignal.setWhite(2);
+lyssignal.setWhite(3);
+
+setInterval(ticktack, 15000);
+
+function ticktack(){
+    var configs = [getLysPaere(1), getLysPaere(2), getLysPaere(3)];    
+    for(var i=0; i < configs.length;i++){
+        var lyspaere = configs[i];
+        var stoppId = lyspaere.stoppId;
+        var linjeId = lyspaere.linjeId;
+        if(stoppId && linjeId){            
+            updateLyspaereState(lyspaere);
         }
         else{
             //console.log("Ikke konfigurert for lyspære: " + i);
@@ -140,6 +122,44 @@ function update(){
     }
 }
 
+function updateLyspaereState(lyspaere){   
+    //console.log(lyspaere)
+    var alternatives = [];
+    var stream = ruter.getDepartures(lyspaere.stoppId, lyspaere.linjeId);            
+    stream.on('data', function(data){
+        alternatives.push(data);                
+    })
+    stream.on('end', function(){
+        if(alternatives.length > 0){
+            var firstAlternative = alternatives[0];
+            var now = moment(new Date());
+            var then = moment(firstAlternative.forventetAvgang);
+            var diffInMinutes = then.diff(now, 'minutes');         
+            sse.send({
+                id: lyspaere.id,
+                forventetAvgang: diffInMinutes
+            });  
+            console.log("forventet avgang: " + firstAlternative.linje + " : " + diffInMinutes);
+            console.log("---------------------------")
+            setMinutesRemaining(lyspaere.id, diffInMinutes);                
+            var walkTime = 0;
+            var spareMinutes = diffInMinutes - walkTime;                  
+            if(spareMinutes >= 5 || spareMinutes === 0){
+                lyssignal.setRed(lyspaere.id);
+            }
+            if(spareMinutes < 5){
+                lyssignal.setYellow(lyspaere.id);
+            }
+            if(spareMinutes === 2){
+                lyssignal.setGreen(lyspaere.id);
+            }
+            if(spareMinutes === 1){
+                lyssignal.setBlink(lyspaere.id);
+            }
+       
+        }
+    })
+}
 
 app.listen(3000);
 

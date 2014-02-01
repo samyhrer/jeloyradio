@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "express": "*",
+    "express-sse": "*",
     "request": "*",
   	"node-hue-api": "*",
     "JSONStream": "*",
