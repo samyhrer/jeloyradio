@@ -1,9 +1,12 @@
 var ruter = require('./lib/ruter'),
+    lyssignal = require('./lib/lyssignal'),
     fs = require('fs'),
+    moment = require('moment'),
     express = require('express');
 
 var app = express();
 app.use(express.static(__dirname + '/public'));
+app.use(express.bodyParser());
 
 
 app.get('/', function(req, res){
@@ -15,16 +18,16 @@ app.get('/', function(req, res){
 
 var lyspaerer = {
     1: {
-        stopp: null,
-        linje: null
+        stoppId: "3010013",
+        linjeId: "60"
     },
     2: {
-        stopp: null,
-        linje: null
+        stoppId: null,
+        linjeId: null
     },
     3: {
-        stopp: null,
-        linje: null
+        stoppId: null,
+        linjeId: null
     }
 }
 
@@ -53,12 +56,72 @@ app.get('/api/lyspaerer/:id', function(req, res){
 });
 
 app.put('/api/lyspaerer/:id/stopp', function(req, res){
-    
+    var id = req.params.id;
+    var lyspaere = getLysPaere(id);
+    var stoppId = req.body.stoppId;
+    lyspaere.stoppId = stoppId;
+    res.send("ok");
 });
 
 app.put('/api/lyspaerer/:id/linje', function(req, res){
-    
+    var id = req.params.id;
+    var lyspaere = getLysPaere(id);
+    var linjeId = req.body.linjeId;
+    lyspaere.linjeId = linjeId;
+    res.send("ok");
 });
+
+
+setInterval(function(){
+    var configs = [getLysPaere(1), getLysPaere(2), getLysPaere(3)];
+    for(var i=0;i<configs.length;i++){
+        var config = configs[i];
+        var stoppId = config.stoppId;
+        var linjeId = config.linjeId;
+        if(stoppId && linjeId){
+            var alternatives = [];
+            var stream = ruter.getDepartures(stoppId, linjeId);            
+            stream.on('data', function(data){
+                alternatives.push(data);                
+            })
+            stream.on('end', function(){
+                var firstAlternative = alternatives[0];
+                var now = moment(new Date());
+                var then = moment(firstAlternative.forventetAdgang);
+                var diffInMinutes = then.diff(now, 'minutes');
+                var walkTime = 0;
+                var spareMinutes = diffInMinutes - walkTime;
+                console.log(spareMinutes)
+                if(spareMinutes > 5){
+                    lyssignal.setRed(i);
+                }
+                if(spareMinutes < 5){
+                    lyssignal.setYellow(i);
+                }
+                if(spareMinutes < 2){
+                    lyssignal.setGreen(i);
+                }
+                if(spareMinutes < 1){
+                    lyssignal.setBlink(i);
+                }
+                /*
+
+                for(var i=0; i < alternatives.length; i++){
+                    var now = moment(new Date());
+                    var then = moment(alternatives[i].forventetAdgang);
+                    var alternative = alternatives[i];
+                    console.log(then.diff(now, 'minutes'))
+                }
+                */
+            })
+        }
+        else{
+            //console.log("Ikke konfigurert for lyspære: " + i);
+        }
+    }
+
+}, 10000)
+
 
 app.listen(3000);
 
