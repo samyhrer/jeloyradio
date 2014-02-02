@@ -20,6 +20,8 @@ app.get('/', function(req, res){
 var lyspaerer = {
     1: {
         id: '1',
+        //stoppId: '3010425',
+        //linjeId: '20',
         stoppId: null,
         linjeId: null,
         minutesUntilExpectedDeparture: '0'
@@ -77,7 +79,7 @@ app.put('/api/lyspaerer/:id', function(req, res){
     var linjeId = req.body.linjeId;
     lyspaere.stoppId = stoppId + "";
     lyspaere.linjeId = linjeId + "";
-    lyssignal.setBlink(id);
+    //lyssignal.setBlink(id);
     ticktack();
     res.send("ok");
 });
@@ -101,11 +103,11 @@ app.put('/api/lyspaerer/:id/linje', function(req, res){
 
 
 
-lyssignal.setWhite(1);
-lyssignal.setWhite(2);
-lyssignal.setWhite(3);
+//lyssignal.setWhite(1);
+//lyssignal.setWhite(2);
+//lyssignal.setWhite(3);
 
-setInterval(ticktack, 15000);
+setInterval(ticktack, 5000);
 
 function ticktack(){
     var configs = [getLysPaere(1), getLysPaere(2), getLysPaere(3)];    
@@ -135,15 +137,13 @@ function updateLyspaereState(lyspaere){
             var now = moment(new Date());
             var then = moment(firstAlternative.forventetAvgang);
             var diffInMinutes = then.diff(now, 'minutes');         
-            sse.send({
-                id: lyspaere.id,
-                forventetAvgang: diffInMinutes
-            });  
+            sse.send(lyspaere);  
             console.log("forventet avgang: " + firstAlternative.linje + " : " + diffInMinutes);
             console.log("---------------------------")
             setMinutesRemaining(lyspaere.id, diffInMinutes);                
             var walkTime = 0;
             var spareMinutes = diffInMinutes - walkTime;                  
+            /*
             if(spareMinutes >= 5 || spareMinutes === 0){
                 lyssignal.setRed(lyspaere.id);
             }
@@ -156,6 +156,7 @@ function updateLyspaereState(lyspaere){
             if(spareMinutes === 1){
                 lyssignal.setBlink(lyspaere.id);
             }
+            */
        
         }
     })

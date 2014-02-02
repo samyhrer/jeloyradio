@@ -43,83 +43,152 @@
 	</head>
 	<body>
 
+        <script src="http://fb.me/react-0.8.0.js"></script>
+    	<script>
 
-		<script>
+            $.ajaxSetup({
+                contentType : 'application/json',
+                processData : false
+            });
+            $.ajaxPrefilter( function( options, originalOptions, jqXHR ) {
+                if (options.data){
+                    options.data=JSON.stringify(options.data);
+                }
+            });
 
 
-            var source = new EventSource('/api/lyspaerer/updates');
-            source.addEventListener('message', function(e) {
-                var data = JSON.parse(e.data);
-                var id = data.id;
-                var label = "";
-                if(data.forventetAvgang === 0){
-                    label = "Klar til adgang"
-                }                    
-                else{
-                    var minuttLabel = "minutter";
-                    if(data.forventetAvgang === 1){
-                        minuttLabel = "minutt"
-                    }     
-                    label = "Avgang om " + data.forventetAvgang + " " + minuttLabel
-                }           
-                $(".lamp" + id).text(label);
-            }, false);
+            var TimeToGo = React.createClass({
+                getInitialState: function() {
+                    return {
+                        stoppesteder: []
+                    };
+                },
+                componentWillMount: function() {
 
-			$.ajaxSetup({
-			    contentType : 'application/json',
-			    processData : false
-			});
-			$.ajaxPrefilter( function( options, originalOptions, jqXHR ) {
-			    if (options.data){
-			        options.data=JSON.stringify(options.data);
-			    }
-			});
+                    $.getJSON("http://localhost:3000/api/stoppesteder", function( data ) {
+                        this.setState({
+                            stoppesteder: data
+                        })
+                    }.bind(this));
 
-		  	var stops = [];
-		  	$.getJSON( "http://localhost:3000/api/stoppesteder", function( data ) {
-		  		$.each( data, function( key, val ) {
-		  			var lines = [];
-		    		stops.push( "<li id='" + key + "'>" + val.Name + " " + val.WalkingDistance + "m"+ 
+                    var source = new EventSource('/api/lyspaerer/updates');
+                    source.addEventListener('message', function(e) {
+                        var lyspaere = JSON.parse(e.data);
+                        var update = $.makeArray($.map(this.state.stoppesteder, function(stoppested, index){
+                            if("" + stoppested.ID === lyspaere.stoppId){                                                     
+                                stoppested.Lines = $.makeArray($.map(stoppested.Lines, function(line, index){                                    
+                                    if("" + line.LineID === lyspaere.linjeId){                   
+                                        line.selected = true;
+                                        line.remaining = lyspaere.minutesUntilExpectedDeparture;
+                                    }                                    
+                                    return line;
+                                }));
+                            }
+                            return stoppested
+                        }));  
+                        
+                        this.setState({
+                            stoppesteder: update
+                        });
 
-		    					"<ul class='lines'>" +
-		    						$.map(val.Lines, function(key, valsomething) {
-		    							return "<li>" + 
-		    									"<span class='lineno'>" + key.LineName + "</span>" + 
-		    									"<span class='lamp' data-lampeId='1' data-stoppId=" + val.ID + " data-linjeId=" + key.LineID + ">&#8277;</span>" +   									
-												"<span class='lamp' data-lampeId='2' data-stoppId=" + val.ID + " data-linjeId=" + key.LineID + ">&#8277;</span>" + 		    									
-												"<span class='lamp' data-lampeId='3' data-stoppId=" + val.ID + " data-linjeId=" + key.LineID + ">&#8277;</span>" +
-
-                                                "<span class='lamp forventetAvgang'>Ikke valgt</span>"
-
-											}).join("")
-		    						+ "</ul>" +
-    						
-		    					"</li>" );
-		  		});
-		 
-		  		$( "<ul/>", {
-		    		"class": "stops",
-		    		html: stops.join( "" )
-		  		}).appendTo( "body" );
-
-		  		$( ".lamp" ).bind( "click", function() {   
-                    var $this = $(this);      
-                    var lampeId = $this.data("lampeid");       
-  					$.ajax({
-					    type: "PUT",
-					    url: "/api/lyspaerer/" + $(this).data("lampeid"),
-					    contentType: "application/json",
-					    data: {"stoppId": $(this).data("stoppid"), "linjeId": $(this).data("linjeid")},
+                        
+                    }.bind(this));
+                },
+                _onSetConfigHandler: function(event){
+                    var $target = $(event.target);
+                    var stoppId = $target.data('stoppid');
+                    var linjeId = $target.data('linjeid');                    
+                    var lampeId = $target.data('lampeid');
+                    $.ajax({
+                        type: "PUT",
+                        url: "/api/lyspaerer/" + lampeId,
+                        contentType: "application/json",
+                        data: {
+                            "stoppId": stoppId, 
+                            "linjeId": linjeId
+                        },
                         success: function(){
-                            var className = "lamp" + lampeId;     
-                            var classSelector = "." + className;                   
-                            $(classSelector).text("Ikke valgt");
-                            $(classSelector).removeClass(className);
-                            $this.siblings(".forventetAvgang").addClass(className).text("Henter data");                                             
+                            
                         }
-					});
-				});
-		  	});
+                    });
+
+                },
+                render: function() {
+                    var me = this;                                            
+                    return (                        
+                        React.DOM.ul(
+                            {
+                                className: 'stops'
+                            },                                                        
+                            $.map(this.state.stoppesteder, function(stoppested, index) {                                
+                                return React.DOM.li(
+                                    {}, 
+                                    [
+                                        stoppested.Name + ' (' + stoppested.WalkingDistance + ' meter)',                                        
+                                        React.DOM.ul(
+                                            {
+                                                className: 'lines'
+                                            },
+                                            $.map(stoppested.Lines, function(line, index) {                                                   
+                                                var uniqueKey = (line.LineID + '_' + stoppested.ID  + '_' + index);
+                                                return React.DOM.li(
+                                                    {
+                                                        key: uniqueKey
+                                                    },
+                                                    
+                                                    React.DOM.span(
+                                                        {
+                                                            className: 'lineno'
+                                                        }, 
+                                                        line.LineName
+                                                    ),
+                                                    React.DOM.span(
+                                                        {
+                                                            className: 'lamp ' + (line.selected === true ? 'selected' : ''),
+                                                            'data-lampeid': '1',
+                                                            'data-linjeid': line.LineID,
+                                                            'data-stoppid': stoppested.ID,
+                                                            onClick: this._onSetConfigHandler                                                            
+                                                        }, 
+                                                        'lyspære 1 '
+                                                    ),
+                                                    React.DOM.span(
+                                                        {
+                                                            className: 'lamp',
+                                                            'data-lampeid': '2',
+                                                            'data-linjeid': line.LineID,
+                                                            'data-stoppid': stoppested.ID,
+                                                            onClick: this._onSetConfigHandler
+                                                        },  
+                                                        'lyspære 2'
+                                                    ),
+                                                    React.DOM.span(
+                                                        {
+                                                            className: 'lamp',
+                                                            'data-lampeid': '3',
+                                                            'data-linjeid': line.LineID,
+                                                            'data-stoppid': stoppested.ID,
+                                                            onClick: this._onSetConfigHandler
+                                                        },  
+                                                        'lyspære 3'
+                                                    ),
+                                                    React.DOM.span(null, (line.selected) ? line.remaining + ' minutter' : '')
+                                                                                                    
+                                                )                                            
+                                            }.bind(this))
+                                        )                                     
+                                    ]
+                                )
+                            }.bind(this))                        
+                        )
+                    )                    
+                }
+            });
+
+            var TimetoGoApp = React.renderComponent(TimeToGo({}), document.querySelector('body'));
+
+
+
 		</script>
 
 	</body>
