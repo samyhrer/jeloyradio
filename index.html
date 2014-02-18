@@ -32,11 +32,54 @@
 				box-shadow: 0px 10px 14px rgba(0, 0, 0, 0.2);
 			}
 
-			.lineno { background-color: #32374b; color: white; display: inline-block; width: 3em; text-align: center; margin: 0.2em 0; padding: 0.3em; }
+			.lineno { 
+                background-color: #32374b; 
+                color:  white; 
+                display: inline-block; 
+                width: 3em; 
+                text-align: center; 
+                margin: 0.2em 0; 
+                padding: 0.3em; }
 
-			.lamp { padding: 0 1em; cursor: pointer; }
-			.lamp:hover { color: red; }
-			.lamp:active { color: rgba(10,60,150, 0.9); text-shadow: 1px 2px 15px rgba(10,60,150, 0.9), 0 0 0 #000, 1px 2px 15px rgba(10,60,150, 0.9);}
+			.lamp {     
+                cursor: pointer;                
+                display: inline-block; 
+                width: 3em; 
+                text-align: center; 
+                margin: 0.2em 0; 
+                padding: 0.3em;                 
+            }
+            .lamp.nogo {        
+                background-color: red;   
+                color:  white; 
+            }
+            .lamp.ready{
+                background-color: yellow;  
+                color:  black;      
+            }
+            .lamp.go{
+                background-color: green;     
+                color:  white;   
+            }
+            .lamp.gogogo{
+                background-color: green;  
+                color:  white;    
+                animation: blink 1s steps(5, start) infinite;  
+            }
+            @keyframes blink {  
+                0% { color: white; }
+                100% { color: green; }
+            }
+            @-webkit-keyframes blink {
+                0% { color: white; }
+                100% { color: green; }
+            }
+            .blink {
+                -webkit-animation: blink 0.5s linear infinite;
+                -moz-animation: blink 0.5s linear infinite;
+                animation: blink 0.5s linear infinite;
+            } 
+			
 
 		</style>
 
@@ -74,11 +117,15 @@
                     var source = new EventSource('/api/lyspaerer/updates');
                     source.addEventListener('message', function(e) {
                         var lyspaere = JSON.parse(e.data);
+
+
                         var update = $.makeArray($.map(this.state.stoppesteder, function(stoppested, index){
                             if("" + stoppested.ID === lyspaere.stoppId){                                                     
-                                stoppested.Lines = $.makeArray($.map(stoppested.Lines, function(line, index){                                    
-                                    if("" + line.LineID === lyspaere.linjeId){                   
+                                stoppested.Lines = $.makeArray($.map(stoppested.Lines, function(line, index){                                                                   
+                                    if("" + line.LineID === lyspaere.linjeId){  
                                         line.selected = true;
+                                        line.paereId = lyspaere.id;
+                                        line.level = lyspaere.level;
                                         line.remaining = lyspaere.minutesUntilExpectedDeparture;
                                     }                                    
                                     return line;
@@ -144,33 +191,33 @@
                                                     ),
                                                     React.DOM.span(
                                                         {
-                                                            className: 'lamp ' + (line.selected === true ? 'selected' : ''),
+                                                            className: 'lamp ' + ((line.selected === true && line.paereId === '1') ? line.level +' selected' : ''),
                                                             'data-lampeid': '1',
                                                             'data-linjeid': line.LineID,
                                                             'data-stoppid': stoppested.ID,
                                                             onClick: this._onSetConfigHandler                                                            
                                                         }, 
-                                                        'lyspære 1 '
+                                                        '1 '
                                                     ),
                                                     React.DOM.span(
                                                         {
-                                                            className: 'lamp',
+                                                            className: 'lamp ' + ((line.selected === true && line.paereId === '2') ? line.level +' selected' : ''),
                                                             'data-lampeid': '2',
                                                             'data-linjeid': line.LineID,
                                                             'data-stoppid': stoppested.ID,
                                                             onClick: this._onSetConfigHandler
                                                         },  
-                                                        'lyspære 2'
+                                                        '2'
                                                     ),
                                                     React.DOM.span(
                                                         {
-                                                            className: 'lamp',
+                                                            className: 'lamp ' + ((line.selected === true && line.paereId === '3') ? line.level +' selected' : ''),
                                                             'data-lampeid': '3',
                                                             'data-linjeid': line.LineID,
                                                             'data-stoppid': stoppested.ID,
                                                             onClick: this._onSetConfigHandler
                                                         },  
-                                                        'lyspære 3'
+                                                        '3'
                                                     ),
                                                     React.DOM.span(null, (line.selected) ? line.remaining + ' minutter' : '')
                                                                                                     

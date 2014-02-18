@@ -24,18 +24,21 @@ var lyspaerer = {
         //linjeId: '20',
         stoppId: null,
         linjeId: null,
+        level: null,
         minutesUntilExpectedDeparture: '0'
     },
     2: {
         id: '2',
         stoppId: null,
         linjeId: null,
+        level: null,
         minutesUntilExpectedDeparture: '0'
     },
     3: {
         id: '3',
         stoppId: null,
         linjeId: null,
+        level: null,
         minutesUntilExpectedDeparture: '0'
     }
 }
@@ -79,7 +82,7 @@ app.put('/api/lyspaerer/:id', function(req, res){
     var linjeId = req.body.linjeId;
     lyspaere.stoppId = stoppId + "";
     lyspaere.linjeId = linjeId + "";
-    //lyssignal.setBlink(id);
+    lyssignal.setBlink(id);
     ticktack();
     res.send("ok");
 });
@@ -103,11 +106,11 @@ app.put('/api/lyspaerer/:id/linje', function(req, res){
 
 
 
-//lyssignal.setWhite(1);
-//lyssignal.setWhite(2);
-//lyssignal.setWhite(3);
+lyssignal.setWhite(1);
+lyssignal.setWhite(2);
+lyssignal.setWhite(3);
 
-setInterval(ticktack, 5000);
+setInterval(ticktack, 15000);
 
 function ticktack(){
     var configs = [getLysPaere(1), getLysPaere(2), getLysPaere(3)];    
@@ -137,26 +140,37 @@ function updateLyspaereState(lyspaere){
             var now = moment(new Date());
             var then = moment(firstAlternative.forventetAvgang);
             var diffInMinutes = then.diff(now, 'minutes');         
-            sse.send(lyspaere);  
-            console.log("forventet avgang: " + firstAlternative.linje + " : " + diffInMinutes);
-            console.log("---------------------------")
+
             setMinutesRemaining(lyspaere.id, diffInMinutes);                
             var walkTime = 0;
             var spareMinutes = diffInMinutes - walkTime;                  
-            /*
-            if(spareMinutes >= 5 || spareMinutes === 0){
+     
+            var level = '';
+            if(spareMinutes >= 5){
+                var level = 'nogo';
                 lyssignal.setRed(lyspaere.id);
             }
             if(spareMinutes < 5){
+                var level = 'ready';
                 lyssignal.setYellow(lyspaere.id);
             }
+
             if(spareMinutes === 2){
+                var level = 'go';
                 lyssignal.setGreen(lyspaere.id);
             }
             if(spareMinutes === 1){
+                var level = 'gogogo';
                 lyssignal.setBlink(lyspaere.id);
             }
-            */
+            if(spareMinutes === 0){
+                var level = 'nogo';
+                lyssignal.setRed(lyspaere.id);
+            }
+            lyspaere.level = level;
+            sse.send(lyspaere);  
+            console.log("forventet avgang: " + firstAlternative.linje + " : " + diffInMinutes);
+            console.log("---------------------------")
        
         }
     })
